@@ -14,8 +14,10 @@ ToolScreen current_screen = SLEEP_SCREEN;
 void setup()
 {
     init_display();
+	show_loading_bar("BOOTING",1,5);
     setup_button_irq(MENU_BTN_PIN, menu_btn_irq);
 	setup_button_irq(BACK_BTN_PIN, back_btn_irq);
+	clear_display();
 }
 
 void loop()
@@ -25,13 +27,17 @@ void loop()
     switch (current_screen){
 
         case MENU_SCREEN:
-            print_text("MENU",1,1,1,true,true);
+            display_menu();
             break;
 
         case HOME_SCREEN:
-			print_text("HOME",1,1,1,true,true);
+			display_home();
             break;
+
+		default:
+			print_text("DEFAULT",1,1,1);
+			break;
     }
 
-	delay(200);
+	delay(150);
 }
