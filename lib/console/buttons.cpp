@@ -19,15 +19,14 @@ void setup_button_irq(uint8_t pin, void (*callback)()){
     );
 }
 
-void read_button(uint8_t button, bool &status){
-	int button_state = digitalRead(button);
-
-	int last_press = 0;
-
-	if (button_state == LOW && millis() - last_press > 200) {
-		last_press = millis();
-        status = true;
-	} else {
-        status = false;
+void update_btns_status(){
+    if (is_menu_pressed){
+        is_menu_pressed = false;
+        current_screen = MENU_SCREEN;
     }
+
+	if (is_home_pressed){
+		is_home_pressed = false;
+		current_screen = HOME_SCREEN;
+	}
 }
