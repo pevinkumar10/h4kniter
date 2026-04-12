@@ -1,12 +1,12 @@
 #pragma once
 
 enum ToolScreen {
-    LOADING_SCREEN,
+    HOME_SCREEN,
     MENU_SCREEN,
-    SLEEP_SCREEN
+    SLEEP_SCREEN,
 };
 
 // global flags (declarations)
 extern volatile bool is_menu_pressed;
-extern volatile bool is_scanning;
+extern volatile bool is_home_pressed;
 extern ToolScreen current_screen;
