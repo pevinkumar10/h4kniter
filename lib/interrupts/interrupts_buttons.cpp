@@ -1,10 +1,11 @@
 #include "tool_state.h"
-#include "buttons_common.h"
+#include "console_common.h"
 #include "interrupts_common.h"
 #include "display_common.h"
 
 volatile unsigned long menu_btn_last_interrupt = 0;
 volatile unsigned long home_btn_last_interrupt = 0;
+volatile unsigned long select_btn_last_interrupt = 0;
 
 void IRAM_ATTR menu_btn_irq(){
     unsigned long now = millis();
@@ -12,7 +13,6 @@ void IRAM_ATTR menu_btn_irq(){
     if (now - menu_btn_last_interrupt > 500) {
         is_menu_pressed = true;
         menu_btn_last_interrupt = now;
-        menu_next();
     }
 }
 
@@ -23,4 +23,13 @@ void IRAM_ATTR back_btn_irq(){
         is_home_pressed = true;
         home_btn_last_interrupt = now;
     }
+}
+
+void IRAM_ATTR select_btn_irq(){
+    unsigned long now = millis();
+
+    if (now - select_btn_last_interrupt > 500) {
+        is_select_pressed = true;
+        select_btn_last_interrupt = now;
+    }  
 }

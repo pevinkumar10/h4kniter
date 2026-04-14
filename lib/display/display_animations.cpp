@@ -4,9 +4,7 @@
 #include "Adafruit_SSD1306.h"
 
 #include "display_common.h"
-#include "wifi_attacks.h"
-
-int selected_index = 0;
+#include "registry_attacks.h"
 
 void _draw_progress_bar(int progress, int y) {
     int bar_width = 100;
@@ -21,6 +19,45 @@ void _draw_progress_bar(int progress, int y) {
     int fill_width = (progress * (bar_width - 2)) / 100;
 
     display.fillRect(x + 1, y + 1, fill_width, bar_height - 2, SSD1306_WHITE);
+}
+
+void show_task_progress_frame(const char* text, uint8_t percent, uint8_t phase, bool show_percent){
+    if (percent > 100) percent = 100;
+
+    const int bar_x = 14;
+    const int bar_y = 34;
+    const int bar_w = 100;
+    const int bar_h = 10;
+    const int dot_y = 50;
+
+    display.clearDisplay();
+    display.setTextColor(SSD1306_WHITE);
+    display.setTextSize(1);
+
+    // Customizable title text for any task.
+    draw_centered_text(text, 10, 1, false, false);
+
+    display.drawRect(bar_x, bar_y, bar_w, bar_h, SSD1306_WHITE);
+    int fill_width = (percent * (bar_w - 2)) / 100;
+    display.fillRect(bar_x + 1, bar_y + 1, fill_width, bar_h - 2, SSD1306_WHITE);
+
+    // Indeterminate activity dots so user sees active work while waiting.
+    for (uint8_t i = 0; i < 3; i++) {
+        int x = 52 + (i * 12);
+        if (((phase + i) % 3) == 0) {
+            display.fillCircle(x, dot_y, 2, SSD1306_WHITE);
+        } else {
+            display.drawCircle(x, dot_y, 2, SSD1306_WHITE);
+        }
+    }
+
+    if (show_percent){
+        char buf[10];
+        snprintf(buf, sizeof(buf), "%u%%", percent);
+        draw_centered_text(buf, 56, 1, false, false);
+    }
+
+    display.display();
 }
 
 void show_loading_bar(const char* text, int size, int delay_sec, bool show_persentage){
@@ -48,62 +85,15 @@ void show_loading_bar(const char* text, int size, int delay_sec, bool show_perse
     }
 }
 
-void display_home(){
-
-    draw_centered_text("H4KNITER",10,1,true,true);
-    //print_text("H4KNITER",,32,1,true,true);
-}
-
-void update_menu(){
-    
-}
-
-void menu_next()
-{
-    const int menu_size = sizeof(WifiAttacksList) / sizeof(WifiAttacksList[0]);
-
-    selected_index++;
-
-    if (selected_index >= menu_size)
-    {
-        selected_index = 0;
-    }
-}
-
-void display_menu()
-{
-    const int items_per_page = 5;
-    const int menu_size = sizeof(WifiAttacksList) / sizeof(WifiAttacksList[0]);
-
+void handle_home(){
     display.clearDisplay();
-    display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
-
-    int page = selected_index / items_per_page;
-    int start = page * items_per_page;
-    int end = start + items_per_page;
-
-    if (end > menu_size) end = menu_size;
-
-    int y = 0;
-
-    for (int i = start; i < end; i++)
-    {
-        if (i == selected_index)
-        {
-            display.fillRect(0, y, 128, 10, SSD1306_WHITE);
-            display.setTextColor(SSD1306_BLACK);
-        }
-        else
-        {
-            display.setTextColor(SSD1306_WHITE);
-        }
-
-        display.setCursor(2, y);
-        display.print(WifiAttacksList[i]);
-
-        y += 12;
-    }
-
+    display.setTextSize(2);
+    display.setCursor(10, 10);
+    display.print("H4KNITER");
+    display.setTextSize(1);
+    display.setCursor(90, 30);
+    display.print("v1");
     display.display();
+
 }

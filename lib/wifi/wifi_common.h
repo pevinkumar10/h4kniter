@@ -12,6 +12,9 @@ struct WiFiNetwork_t {
 };
 
 extern WiFiNetwork_t networks[MAX_NETWORKS];
+extern int scanned_network_count;
 
 void init_wifi();
 void scan_wifi();
+void scan_wifi(const char* loading_text);
+void disable_wifi();

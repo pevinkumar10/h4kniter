@@ -6,3 +6,8 @@ void init_wifi(){
     WiFi.disconnect();
     delay(100);
 }
+
+void disable_wifi(){
+    WiFi.disconnect(true); 
+    WiFi.mode(WIFI_OFF);
+}
