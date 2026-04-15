@@ -1,6 +1,8 @@
 #include "WiFi.h"
 #include "wifi_common.h"
 #include "display_common.h"
+#include "esp_wifi.h"
+#include "esp_system.h"
 
 WiFiNetwork_t networks[MAX_NETWORKS];
 int scanned_network_count = 0;
@@ -94,13 +96,33 @@ void scan_wifi()
 
 void scan_wifi(const char* loading_text)
 {
+    scan_wifi(loading_text, false, false, false);
+}
+
+void scan_wifi(const char* loading_text, bool random_mac,bool passive, bool safe_mode)
+{
     reset_network_cache();
 
-    WiFi.scanDelete();
-    WiFi.scanNetworks(true, true);
+    if (random_mac)
+    {
+        uint8_t mac[6];
+        esp_fill_random(mac, 6);
+        mac[0] = (mac[0] | 0x02) & 0xFE; // locally administered, unicast
+        esp_wifi_set_mac(WIFI_IF_STA, mac);
+    }
 
+    WiFi.scanDelete();
+    
     uint8_t phase = 0;
     uint8_t fake_progress = 0;
+    uint16_t scan_delay = 85;
+    
+    bool show_hidden = true;
+    bool passive_scan = passive;
+
+    WiFi.scanNetworks(true, show_hidden, passive_scan);
+
+    if (safe_mode) scan_delay = 140;
 
     while (true)
     {
@@ -125,8 +147,10 @@ void scan_wifi(const char* loading_text)
             fake_progress += 4;
         }
 
-        delay(85);
+        delay(scan_delay);
     }
+
+    scan_result_type = WIFI_SCAN_R;
 
     // Final completion frame for visual closure.
     show_task_progress_frame(loading_text, 100, phase, true);

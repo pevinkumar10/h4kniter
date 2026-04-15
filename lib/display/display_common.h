@@ -8,7 +8,14 @@
 #include "Adafruit_GFX.h"
 #include "Adafruit_SSD1306.h"
 
+enum ResultType{
+    WIFI_SCAN_R,
+    EVIL_TWIN_R,
+    NO_R
+};
+
 extern Adafruit_SSD1306 display;
+extern ResultType scan_result_type;
 
 void init_display();
 void clear_display();

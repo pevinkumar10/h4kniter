@@ -10,5 +10,9 @@ struct AttacksList_t {
     const char* description;
 };
 
+struct SubAttacksList_t {
+    const char** sub_attacks;
+};
+
 extern AttacksList_t WiFiAttacksList[];
 extern const int wifi_attack_count;

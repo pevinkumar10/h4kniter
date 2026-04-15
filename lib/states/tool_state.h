@@ -15,6 +15,10 @@ enum ToolScreen {
 extern volatile bool is_menu_pressed;
 extern volatile bool is_home_pressed;
 extern volatile bool is_select_pressed;
+extern volatile bool is_movefd_pressed;
+extern volatile bool is_movebd_pressed;
+
+extern volatile bool is_interrupted;
 
 extern int selected_index;
 extern const char* selected_tag;

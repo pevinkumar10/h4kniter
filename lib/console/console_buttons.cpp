@@ -20,6 +20,15 @@ void setup_button_irq(uint8_t pin, void (*callback)()){
     );
 }
 
+void clear_button_state()
+{
+    is_menu_pressed = false;
+    is_home_pressed = false;
+    is_select_pressed = false;
+    is_movefd_pressed = false;
+    is_movebd_pressed = false;
+}
+
 void update_btns_status(){
     if (current_screen == RESULT_SCREEN){
         // RESULT_SCREEN handles button actions in main loop.
@@ -30,6 +39,8 @@ void update_btns_status(){
         is_home_pressed = false;
         is_menu_pressed = false;
         is_select_pressed = false;
+        is_movefd_pressed = false;
+        is_movebd_pressed = false;
 
         // Back/Home navigation hierarchy.
         if (current_screen == RESULT_SCREEN){
@@ -46,15 +57,27 @@ void update_btns_status(){
     if (is_menu_pressed){
         is_menu_pressed = false;
 
-        if (current_screen == MENU_SCREEN){
-            tool_menu_next();
-        } else if (current_screen == RESULT_SCREEN) {
-            // Menu is disabled on result screen (back only).
-        } else {
+        if (current_screen != MENU_SCREEN) {
             // Always start from first item when opening menu.
             selected_index = 0;
             current_screen = MENU_SCREEN;
             clear_display();
+        }
+    }
+
+    if (is_movefd_pressed){
+        is_movefd_pressed = false;
+
+        if (current_screen == MENU_SCREEN){
+            tool_menu_next();
+        }
+    }
+
+    if (is_movebd_pressed){
+        is_movebd_pressed = false;
+
+        if (current_screen == MENU_SCREEN){
+            tool_menu_prev();
         }
     }
 

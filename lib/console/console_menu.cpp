@@ -6,12 +6,222 @@
 #include "tool_state.h"
 #include "display_common.h"
 #include "wifi_common.h"
+#include "console_common.h"
 #include "registry_attacks.h"
 
 int selected_index = 0;
 const char* selected_tag = "";
 
-void _list_menu()
+enum AttackConfigMask : uint8_t
+{
+    CFG_OPT_ONE = (1 << 0),
+    CFG_OPT_TWO = (1 << 1),
+    CFG_OPT_THREE = (1 << 2),
+    CFG_OPT_FOUR = (1 << 3)
+};
+
+struct ConfigOption
+{
+    const char *label;
+    uint8_t flag;
+    bool selected;
+};
+
+static int show_sub_menu(const char *title, const char **options, int option_count)
+{
+    if (option_count <= 0)
+    {
+        return -1;
+    }
+
+    int selected_option = 0;
+    const int items_per_page = 4;
+
+    clear_button_state();
+
+    while (true)
+    {
+        if (is_movefd_pressed)
+        {
+            is_movefd_pressed = false;
+            selected_option++;
+            if (selected_option >= option_count)
+            {
+                selected_option = 0;
+            }
+        }
+
+        if (is_movebd_pressed)
+        {
+            is_movebd_pressed = false;
+            selected_option--;
+            if (selected_option < 0)
+            {
+                selected_option = option_count - 1;
+            }
+        }
+
+        if (is_select_pressed)
+        {
+            is_select_pressed = false;
+            clear_button_state();
+            return selected_option;
+        }
+
+        if (is_home_pressed)
+        {
+            is_home_pressed = false;
+            clear_button_state();
+            return -1;
+        }
+
+        display.clearDisplay();
+        display.setTextColor(SSD1306_WHITE);
+        display.setTextSize(1);
+        display.setCursor(2, 2);
+        display.print(title);
+        display.drawLine(0, 10, 127, 10, SSD1306_WHITE);
+
+        int page = selected_option / items_per_page;
+        int start = page * items_per_page;
+        int end = start + items_per_page;
+        if (end > option_count)
+        {
+            end = option_count;
+        }
+
+        int y = 14;
+        for (int i = start; i < end; i++)
+        {
+            if (i == selected_option)
+            {
+                display.fillRect(0, y, 125, 10, SSD1306_WHITE);
+                display.setTextColor(SSD1306_BLACK);
+            }
+            else
+            {
+                display.setTextColor(SSD1306_WHITE);
+            }
+
+            display.setCursor(2, y);
+            display.print(options[i]);
+            y += 11;
+        }
+
+        int total_pages = (option_count + items_per_page - 1) / items_per_page;
+        int bar_height = 64 / total_pages;
+        int bar_y = page * bar_height;
+        display.fillRect(125, bar_y, 3, bar_height, SSD1306_WHITE);
+
+        display.display();
+        delay(85);
+    }
+}
+
+static uint8_t run_attack_config_selector(const char *title, ConfigOption *options, int option_count)
+{
+    int selected_option = 0;
+    const int items_per_page = 4;
+
+    clear_button_state();
+
+    while (true)
+    {
+        if (is_movefd_pressed)
+        {
+            is_movefd_pressed = false;
+            selected_option++;
+            if (selected_option >= option_count)
+            {
+                selected_option = 0;
+            }
+        }
+
+        if (is_movebd_pressed)
+        {
+            is_movebd_pressed = false;
+            selected_option--;
+            if (selected_option < 0)
+            {
+                selected_option = option_count - 1;
+            }
+        }
+
+        if (is_select_pressed)
+        {
+            is_select_pressed = false;
+            options[selected_option].selected = !options[selected_option].selected;
+        }
+
+        if (is_menu_pressed)
+        {
+            is_menu_pressed = false;
+            uint8_t config_mask = 0;
+
+            for (int i = 0; i < option_count; i++)
+            {
+                if (options[i].selected)
+                {
+                    config_mask |= options[i].flag;
+                }
+            }
+
+            clear_button_state();
+            return config_mask;
+        }
+
+        if (is_home_pressed)
+        {
+            is_home_pressed = false;
+            clear_button_state();
+            return 0;
+        }
+
+        display.clearDisplay();
+        display.setTextColor(SSD1306_WHITE);
+        display.setTextSize(1);
+        display.setCursor(2, 1);
+        display.print(title);
+        display.drawLine(0, 9, 127, 9, SSD1306_WHITE);
+
+        int page = selected_option / items_per_page;
+        int start = page * items_per_page;
+        int end = start + items_per_page;
+        if (end > option_count)
+        {
+            end = option_count;
+        }
+
+        int y = 12;
+        for (int i = start; i < end; i++)
+        {
+            if (i == selected_option)
+            {
+                display.fillRect(0, y, 125, 10, SSD1306_WHITE);
+                display.setTextColor(SSD1306_BLACK);
+            }
+            else
+            {
+                display.setTextColor(SSD1306_WHITE);
+            }
+
+            display.setCursor(2, y);
+            display.print(options[i].selected ? "[x] " : "[ ] ");
+            display.print(options[i].label);
+            y += 11;
+        }
+
+        int total_pages = (option_count + items_per_page - 1) / items_per_page;
+        int bar_height = 64 / total_pages;
+        int bar_y = page * bar_height;
+        display.fillRect(125, bar_y, 3, bar_height, SSD1306_WHITE);
+
+        display.display();
+        delay(85);
+    }
+}
+
+void _list_attacks_menu()
 {
     const int items_per_page = 5;
     const int menu_size = wifi_attack_count;
@@ -104,6 +314,7 @@ void _list_menu()
     int total_pages = (menu_size + items_per_page - 1) / items_per_page;
     int bar_height = 64 / total_pages;
     int bar_y = page * bar_height;
+    display.fillRect(125, bar_y, 3, bar_height, SSD1306_WHITE);
 
     display.display();
 }
@@ -121,7 +332,19 @@ void tool_menu_next()
     }
 }
 
-void handle_selection()
+void tool_menu_prev()
+{
+    const int menu_size = wifi_attack_count;
+    if (menu_size <= 0) return;
+
+    selected_index--;
+    if (selected_index < 0)
+    {
+        selected_index = menu_size - 1;
+    }
+}
+
+void handle_menu_selection()
 {
     if (strcmp(selected_tag, "back") == 0)
     {
@@ -130,12 +353,105 @@ void handle_selection()
     }
     else if (strcmp(selected_tag, "scan_network") == 0)
     {
+        const char *scan_modes[] = {
+            "Quick Scan",
+            "Deep Scan",
+            "Hidden Net Scan"
+        };
+        int mode_index = show_sub_menu("SCAN MODE", scan_modes, 2);
+        if (mode_index < 0)
+        {
+            selected_tag = "";
+            current_screen = MENU_SCREEN;
+            clear_display();
+            return;
+        }
+
+        ConfigOption scan_options[] = {
+            {"Quick Scan", CFG_OPT_ONE, false},
+            {"Deep Mode", CFG_OPT_TWO, false},
+            {"Hidden Net Scan", CFG_OPT_THREE, false}
+        };
+        uint8_t scan_config = run_attack_config_selector("SCAN CONFIG", scan_options, 4);
+
+        bool random_mac = (scan_config & CFG_OPT_ONE) != 0;
+        bool burst_mode = (scan_config & CFG_OPT_TWO) != 0;
+        bool safe_mode = (scan_config & CFG_OPT_THREE) != 0;
+
+        if (mode_index == 1)
+        {
+            safe_mode = true;
+        }
+
         init_wifi();
-        scan_wifi("Scanning WiFi");
+        scan_wifi("Scanning WiFi", random_mac, burst_mode, safe_mode);
         disable_wifi();
         
         selected_tag = "";
         current_screen = RESULT_SCREEN;
+    }
+    else if (strcmp(selected_tag, "attack_deauth") == 0)
+    {
+        const char *deauth_modes[] = {
+            "Targeted Deauth",
+            "Broadcast Deauth",
+            "Combo Deauth"
+        };
+        int mode_index = show_sub_menu("DEAUTH MODE", deauth_modes, 3);
+        if (mode_index < 0)
+        {
+            selected_tag = "";
+            current_screen = MENU_SCREEN;
+            clear_display();
+            return;
+        }
+
+        ConfigOption deauth_options[] = {
+            {"Random MAC", CFG_OPT_ONE, false},
+            {"Burst Mode", CFG_OPT_TWO, false},
+            {"Safe Mode", CFG_OPT_THREE, false},
+            {"Jammer Mode", CFG_OPT_FOUR, false}
+        };
+
+        uint8_t config_mask = run_attack_config_selector("DEAUTH CONFIG", deauth_options, 4);
+        bool random_mac = (config_mask & CFG_OPT_ONE) != 0;
+        bool burst_mode = (config_mask & CFG_OPT_TWO) != 0;
+        bool safe_mode = (config_mask & CFG_OPT_THREE) != 0;
+        bool jammer_mode = (config_mask & CFG_OPT_FOUR) != 0;
+
+        if (mode_index == 0)
+        {
+            launch_deauth("targeted_deauth", random_mac, burst_mode, safe_mode, jammer_mode);
+        }
+        else if (mode_index == 1)
+        {
+            launch_deauth("broadcast_deauth", random_mac, burst_mode, safe_mode, jammer_mode);
+        }
+        else
+        {
+            launch_deauth("combo_deauth", random_mac, burst_mode, safe_mode, jammer_mode);
+        }
+
+        selected_tag = "";
+        current_screen = MENU_SCREEN;
+        clear_display();
+    }
+    else if (strcmp(selected_tag, "attack_eviltwin") == 0)
+    {
+        show_task_progress_frame("Evil Twin soon", 100, 0, false);
+        delay(400);
+        selected_tag = "";
+        current_screen = MENU_SCREEN;
+        clear_display();
+    }
+    else if (strcmp(selected_tag, "attack_deauth_eviltwin") == 0)
+    {
+        launch_deauth("targeted_deauth", false, false, false, false);
+        show_task_progress_frame("Evil Twin soon", 100, 0, false);
+        delay(400);
+        selected_tag = "";
+        current_screen = MENU_SCREEN;
+        clear_display();
     }
     else
     {
@@ -144,6 +460,167 @@ void handle_selection()
     }
 }
 
+void handle_result_screen()
+{
+    static int result_selected_index = 0;
+    static bool result_show_details = false;
+
+    if (scan_result_type == WIFI_SCAN_R)
+    {
+        // Reset state only once when new results arrive.
+        result_selected_index = 0;
+        result_show_details = false;
+        scan_result_type = NO_R;
+    }
+
+    const int items_per_page = 4;
+    int menu_size = scanned_network_count;
+
+    if (menu_size <= 0)
+    {
+        result_selected_index = 0;
+    }
+    else
+    {
+        if (result_selected_index >= menu_size)
+            result_selected_index = 0;
+        if (result_selected_index < 0)
+            result_selected_index = 0;
+    }
+
+    if (is_movefd_pressed)
+    {
+        is_movefd_pressed = false;
+        if (!result_show_details && menu_size > 0)
+        {
+            result_selected_index++;
+            if (result_selected_index >= menu_size)
+                result_selected_index = 0;
+        }
+    }
+
+    if (is_movebd_pressed)
+    {
+        is_movebd_pressed = false;
+        if (!result_show_details && menu_size > 0)
+        {
+            result_selected_index--;
+            if (result_selected_index < 0)
+                result_selected_index = menu_size - 1;
+        }
+    }
+
+    if (is_select_pressed)
+    {
+        is_select_pressed = false;
+        if (menu_size > 0)
+        {
+            result_show_details = true;
+        }
+    }
+
+    if (is_home_pressed)
+    {
+        is_home_pressed = false;
+        if (result_show_details)
+        {
+            result_show_details = false;
+        }
+        else
+        {
+            result_selected_index = 0;
+            result_show_details = false;
+            current_screen = MENU_SCREEN;
+            clear_display();
+            return;
+        }
+    }
+
+    display.clearDisplay();
+    display.setTextColor(SSD1306_WHITE);
+    display.setTextSize(1);
+    display.setCursor(2, 1);
+    display.print("SCAN RESULT");
+    display.drawLine(0, 9, 127, 9, SSD1306_WHITE);
+
+    if (menu_size == 0)
+    {
+        display.setCursor(2, 25);
+        display.print("No networks found");
+        display.drawLine(0, 54, 127, 54, SSD1306_WHITE);
+        display.setCursor(2, 56);
+        display.print("BACK: menu");
+        display.display();
+        return;
+    }
+
+    if (result_show_details)
+    {
+        WiFiNetwork_t net = networks[result_selected_index];
+
+        display.setCursor(2, 14);
+        display.print(String("SSID: ") + (net.ssid.length() > 0 ? net.ssid : "<hidden>"));
+        display.setCursor(2, 34);
+        display.print(String("RSSI:") + net.rssi + String(" dBm"));
+        display.setCursor(2, 44);
+        display.print("CH:");
+        display.print(net.channel);
+        display.print(" ");
+        display.print(net.security);
+
+        display.drawLine(0, 54, 127, 54, SSD1306_WHITE);
+        display.setCursor(2, 56);
+        display.print("BACK:list");
+        display.display();
+        return;
+    }
+
+    int page = result_selected_index / items_per_page;
+    int start = page * items_per_page;
+    int end = start + items_per_page;
+
+    if (end > menu_size)
+        end = menu_size;
+
+    int y = 12;
+    for (int i = start; i < end; i++)
+    {
+        String ssid = networks[i].ssid;
+
+        if (i == result_selected_index)
+        {
+            display.fillRect(0, y, 128, 10, SSD1306_WHITE);
+            display.setTextColor(SSD1306_BLACK);
+        }
+        else
+        {
+            display.setTextColor(SSD1306_WHITE);
+        }
+
+        display.setCursor(2, y);
+        if (ssid.length() > 18)
+        {
+            display.print(ssid.substring(0, 18));
+        }
+        else
+        {
+            display.print(ssid);
+        }
+
+        display.setCursor(90, y);
+        display.print(networks[i].rssi);
+
+        y += 12;
+    }
+
+    int total_pages = (menu_size + items_per_page - 1) / items_per_page;
+    int bar_height = 64 / total_pages;
+    int bar_y = page * bar_height;
+    display.fillRect(125, bar_y, 3, bar_height, SSD1306_WHITE);
+
+    display.display();
+}
+
 void handle_menu(){
-    _list_menu();
+    _list_attacks_menu();
 }

@@ -6,6 +6,8 @@
 volatile unsigned long menu_btn_last_interrupt = 0;
 volatile unsigned long home_btn_last_interrupt = 0;
 volatile unsigned long select_btn_last_interrupt = 0;
+volatile unsigned long movefd_btn_last_interrupt = 0;
+volatile unsigned long movebd_btn_last_interrupt = 0;
 
 void IRAM_ATTR menu_btn_irq(){
     unsigned long now = millis();
@@ -32,4 +34,22 @@ void IRAM_ATTR select_btn_irq(){
         is_select_pressed = true;
         select_btn_last_interrupt = now;
     }  
+}
+
+void IRAM_ATTR movefd_btn_irq(){
+    unsigned long now = millis();
+
+    if (now - movefd_btn_last_interrupt > 250) {
+        is_movefd_pressed = true;
+        movefd_btn_last_interrupt = now;
+    }
+}
+
+void IRAM_ATTR movebd_btn_irq(){
+    unsigned long now = millis();
+
+    if (now - movebd_btn_last_interrupt > 250) {
+        is_movebd_pressed = true;
+        movebd_btn_last_interrupt = now;
+    }
 }

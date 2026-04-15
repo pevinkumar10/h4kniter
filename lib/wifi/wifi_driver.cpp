@@ -1,5 +1,5 @@
 #include <WiFi.h>
-#include <esp_wifi.h>
+#include "esp_wifi.h"
 
 void init_wifi(){
     WiFi.mode(WIFI_STA);
@@ -10,4 +10,10 @@ void init_wifi(){
 void disable_wifi(){
     WiFi.disconnect(true); 
     WiFi.mode(WIFI_OFF);
+}
+
+void set_promiscuous_mode(){
+
+    esp_wifi_set_promiscuous(true);
+
 }

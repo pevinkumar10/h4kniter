@@ -92,8 +92,12 @@ void handle_home(){
     display.setCursor(10, 10);
     display.print("H4KNITER");
     display.setTextSize(1);
-    display.setCursor(90, 30);
+    display.setCursor(100, 30);
     display.print("v1");
+
+    display.drawLine(0, 50, 127, 50, SSD1306_WHITE);
+    display.setCursor(55, 56);
+    display.print("Menu");
     display.display();
 
 }
