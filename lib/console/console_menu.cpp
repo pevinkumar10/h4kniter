@@ -12,21 +12,6 @@
 int selected_index = 0;
 const char* selected_tag = "";
 
-enum AttackConfigMask : uint8_t
-{
-    CFG_OPT_ONE = (1 << 0),
-    CFG_OPT_TWO = (1 << 1),
-    CFG_OPT_THREE = (1 << 2),
-    CFG_OPT_FOUR = (1 << 3)
-};
-
-struct ConfigOption
-{
-    const char *label;
-    uint8_t flag;
-    bool selected;
-};
-
 static int show_sub_menu(const char *title, const char **options, int option_count)
 {
     if (option_count <= 0)
@@ -118,8 +103,11 @@ static int show_sub_menu(const char *title, const char **options, int option_cou
     }
 }
 
-static uint8_t run_attack_config_selector(const char *title, ConfigOption *options, int option_count)
+static int run_attack_config_selector(const char *title, ConfigOption *options, int option_count)
 {
+    if (option_count <= 0)
+        return -1;
+
     int selected_option = 0;
     const int items_per_page = 4;
 
@@ -127,36 +115,37 @@ static uint8_t run_attack_config_selector(const char *title, ConfigOption *optio
 
     while (true)
     {
+        // Move forward
         if (is_movefd_pressed)
         {
             is_movefd_pressed = false;
             selected_option++;
             if (selected_option >= option_count)
-            {
                 selected_option = 0;
-            }
         }
 
+        // Move backward
         if (is_movebd_pressed)
         {
             is_movebd_pressed = false;
             selected_option--;
             if (selected_option < 0)
-            {
                 selected_option = option_count - 1;
-            }
         }
 
+        // Toggle selection
         if (is_select_pressed)
         {
             is_select_pressed = false;
             options[selected_option].selected = !options[selected_option].selected;
         }
 
+        // Confirm (MENU button)
         if (is_menu_pressed)
         {
             is_menu_pressed = false;
-            uint8_t config_mask = 0;
+
+            int config_mask = 0;
 
             for (int i = 0; i < option_count; i++)
             {
@@ -170,16 +159,19 @@ static uint8_t run_attack_config_selector(const char *title, ConfigOption *optio
             return config_mask;
         }
 
+        // 🔙 Back (HOME button)
         if (is_home_pressed)
         {
             is_home_pressed = false;
             clear_button_state();
-            return 0;
+            return -1;   // now works (int type)
         }
 
+        // 🖥️ Render UI
         display.clearDisplay();
         display.setTextColor(SSD1306_WHITE);
         display.setTextSize(1);
+
         display.setCursor(2, 1);
         display.print(title);
         display.drawLine(0, 9, 127, 9, SSD1306_WHITE);
@@ -187,12 +179,12 @@ static uint8_t run_attack_config_selector(const char *title, ConfigOption *optio
         int page = selected_option / items_per_page;
         int start = page * items_per_page;
         int end = start + items_per_page;
+
         if (end > option_count)
-        {
             end = option_count;
-        }
 
         int y = 12;
+
         for (int i = start; i < end; i++)
         {
             if (i == selected_option)
@@ -208,16 +200,19 @@ static uint8_t run_attack_config_selector(const char *title, ConfigOption *optio
             display.setCursor(2, y);
             display.print(options[i].selected ? "[x] " : "[ ] ");
             display.print(options[i].label);
+
             y += 11;
         }
 
+        // Scrollbar
         int total_pages = (option_count + items_per_page - 1) / items_per_page;
         int bar_height = 64 / total_pages;
         int bar_y = page * bar_height;
+
         display.fillRect(125, bar_y, 3, bar_height, SSD1306_WHITE);
 
         display.display();
-        delay(85);
+        delay(30);
     }
 }
 
@@ -359,6 +354,7 @@ void handle_menu_selection()
             "Hidden Net Scan"
         };
         int mode_index = show_sub_menu("SCAN MODE", scan_modes, 2);
+
         if (mode_index < 0)
         {
             selected_tag = "";
@@ -368,15 +364,20 @@ void handle_menu_selection()
         }
 
         ConfigOption scan_options[] = {
-            {"Quick Scan", CFG_OPT_ONE, false},
-            {"Deep Mode", CFG_OPT_TWO, false},
-            {"Hidden Net Scan", CFG_OPT_THREE, false}
+            {"Random Mac", CFG_OPT_ONE, false},
+            {"Safe Scan", CFG_OPT_TWO, false},
         };
-        uint8_t scan_config = run_attack_config_selector("SCAN CONFIG", scan_options, 4);
+        int scan_config = run_attack_config_selector("SCAN CONFIG", scan_options, 2);
+        
+        if (scan_config < 0)
+        {
+            current_screen = MENU_SCREEN;
+            clear_display();
+            return;
+        }
 
         bool random_mac = (scan_config & CFG_OPT_ONE) != 0;
-        bool burst_mode = (scan_config & CFG_OPT_TWO) != 0;
-        bool safe_mode = (scan_config & CFG_OPT_THREE) != 0;
+        bool safe_mode = (scan_config & CFG_OPT_TWO) != 0;
 
         if (mode_index == 1)
         {
@@ -384,7 +385,7 @@ void handle_menu_selection()
         }
 
         init_wifi();
-        scan_wifi("Scanning WiFi", random_mac, burst_mode, safe_mode);
+        scan_wifi("Scanning WiFi", random_mac,safe_mode);
         disable_wifi();
         
         selected_tag = "";
@@ -413,7 +414,15 @@ void handle_menu_selection()
             {"Jammer Mode", CFG_OPT_FOUR, false}
         };
 
-        uint8_t config_mask = run_attack_config_selector("DEAUTH CONFIG", deauth_options, 4);
+        int config_mask = run_attack_config_selector("DEAUTH CONFIG", deauth_options, 4);
+        if (config_mask < 0)
+        {
+            selected_tag = "";
+            current_screen = MENU_SCREEN;
+            clear_display();
+            return;
+        }
+
         bool random_mac = (config_mask & CFG_OPT_ONE) != 0;
         bool burst_mode = (config_mask & CFG_OPT_TWO) != 0;
         bool safe_mode = (config_mask & CFG_OPT_THREE) != 0;

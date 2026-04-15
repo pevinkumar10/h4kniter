@@ -17,7 +17,7 @@ extern int scanned_network_count;
 void init_wifi();
 void scan_wifi();
 void scan_wifi(const char* loading_text);
-void scan_wifi(const char* loading_text, bool random_mac,bool passive, bool safe_mode);
+void scan_wifi(const char* loading_text, bool random_mac, bool safe_mode);
 void disable_wifi();
 
 // WiFi Attacks

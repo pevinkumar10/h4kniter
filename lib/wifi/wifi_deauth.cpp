@@ -92,7 +92,7 @@ void _broadcast_send_deauth_frame(uint8_t ap_addr[], uint8_t target_addr[])
 void launch_deauth(const char *attack_type, bool random_mac, bool burst_mode, bool safe_mode, bool jammer_mode)
 {
     init_wifi();
-    scan_wifi("Scanning targets", random_mac, burst_mode, safe_mode);
+    scan_wifi("Scanning targets", random_mac, safe_mode);
 
     if (scanned_network_count <= 0)
     {

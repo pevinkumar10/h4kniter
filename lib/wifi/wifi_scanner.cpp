@@ -96,10 +96,10 @@ void scan_wifi()
 
 void scan_wifi(const char* loading_text)
 {
-    scan_wifi(loading_text, false, false, false);
+    scan_wifi(loading_text, false, false);
 }
 
-void scan_wifi(const char* loading_text, bool random_mac,bool passive, bool safe_mode)
+void scan_wifi(const char* loading_text, bool random_mac, bool safe_mode)
 {
     reset_network_cache();
 
@@ -107,7 +107,7 @@ void scan_wifi(const char* loading_text, bool random_mac,bool passive, bool safe
     {
         uint8_t mac[6];
         esp_fill_random(mac, 6);
-        mac[0] = (mac[0] | 0x02) & 0xFE; // locally administered, unicast
+        mac[0] = (mac[0] | 0x02) & 0xFE;
         esp_wifi_set_mac(WIFI_IF_STA, mac);
     }
 
@@ -118,9 +118,8 @@ void scan_wifi(const char* loading_text, bool random_mac,bool passive, bool safe
     uint16_t scan_delay = 85;
     
     bool show_hidden = true;
-    bool passive_scan = passive;
 
-    WiFi.scanNetworks(true, show_hidden, passive_scan);
+    WiFi.scanNetworks(true, show_hidden, safe_mode);
 
     if (safe_mode) scan_delay = 140;
 
