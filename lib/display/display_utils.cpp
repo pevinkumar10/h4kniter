@@ -1,3 +1,4 @@
+#include "time.h"
 #include "Arduino.h"
 #include "Wire.h"
 #include "Adafruit_GFX.h"
@@ -46,4 +47,26 @@ void draw_centered_text(const char* text, int y, int size, bool render, bool cle
     if (render){
         display.display();
     }
+}
+
+void draw_h4kniter_home()
+{
+    display.clearDisplay();
+    display.setTextColor(SSD1306_WHITE);
+
+    // Outer border (clean frame)
+    display.drawRect(0, 0, 128, 64, SSD1306_WHITE);
+
+    // Main Title (split for style)
+    display.setTextSize(2);
+    display.setCursor(18, 18);
+    display.print("H4KNITER");
+
+    display.drawLine(0, 85, 128, 45, SSD1306_WHITE);
+
+    print_text("10/08",19,39,1,false);
+
+    print_text("v1",110,52,false);
+
+    display.display();
 }

@@ -12,7 +12,32 @@
 int selected_index = 0;
 const char* selected_tag = "";
 
-static int show_sub_menu(const char *title, const char **options, int option_count)
+void tool_menu_next()
+{
+    const int menu_size = wifi_attack_count;
+    if (menu_size <= 0) return;
+
+    selected_index++;
+
+    if (selected_index >= menu_size)
+    {
+        selected_index = 0;
+    }
+}
+
+void tool_menu_prev()
+{
+    const int menu_size = wifi_attack_count;
+    if (menu_size <= 0) return;
+
+    selected_index--;
+    if (selected_index < 0)
+    {
+        selected_index = menu_size - 1;
+    }
+}
+
+static int _show_sub_menu(const char *title, const char **options, int option_count)
 {
     if (option_count <= 0)
     {
@@ -103,7 +128,7 @@ static int show_sub_menu(const char *title, const char **options, int option_cou
     }
 }
 
-static int run_attack_config_selector(const char *title, ConfigOption *options, int option_count)
+static int _run_attack_config_selector(const char *title, ConfigOption *options, int option_count)
 {
     if (option_count <= 0)
         return -1;
@@ -167,7 +192,7 @@ static int run_attack_config_selector(const char *title, ConfigOption *options, 
             return -1;   // now works (int type)
         }
 
-        // 🖥️ Render UI
+        // Render UI
         display.clearDisplay();
         display.setTextColor(SSD1306_WHITE);
         display.setTextSize(1);
@@ -210,6 +235,8 @@ static int run_attack_config_selector(const char *title, ConfigOption *options, 
         int bar_y = page * bar_height;
 
         display.fillRect(125, bar_y, 3, bar_height, SSD1306_WHITE);
+
+        print_text("Start: Menu",5,55,1);
 
         display.display();
         delay(30);
@@ -314,46 +341,16 @@ void _list_attacks_menu()
     display.display();
 }
 
-void tool_menu_next()
-{
-    const int menu_size = wifi_attack_count;
-    if (menu_size <= 0) return;
-
-    selected_index++;
-
-    if (selected_index >= menu_size)
-    {
-        selected_index = 0;
-    }
-}
-
-void tool_menu_prev()
-{
-    const int menu_size = wifi_attack_count;
-    if (menu_size <= 0) return;
-
-    selected_index--;
-    if (selected_index < 0)
-    {
-        selected_index = menu_size - 1;
-    }
-}
-
 void handle_menu_selection()
 {
-    if (strcmp(selected_tag, "back") == 0)
-    {
-        selected_tag = "";
-        current_screen = HOME_SCREEN;
-    }
-    else if (strcmp(selected_tag, "scan_network") == 0)
+    if (strcmp(selected_tag, "scan_network") == 0)
     {
         const char *scan_modes[] = {
             "Quick Scan",
             "Deep Scan",
             "Hidden Net Scan"
         };
-        int mode_index = show_sub_menu("SCAN MODE", scan_modes, 2);
+        int mode_index = _show_sub_menu("SCAN MODE", scan_modes, 2);
 
         if (mode_index < 0)
         {
@@ -367,7 +364,7 @@ void handle_menu_selection()
             {"Random Mac", CFG_OPT_ONE, false},
             {"Safe Scan", CFG_OPT_TWO, false},
         };
-        int scan_config = run_attack_config_selector("SCAN CONFIG", scan_options, 2);
+        int scan_config = _run_attack_config_selector("SCAN CONFIG", scan_options, 2);
         
         if (scan_config < 0)
         {
@@ -398,7 +395,7 @@ void handle_menu_selection()
             "Broadcast Deauth",
             "Combo Deauth"
         };
-        int mode_index = show_sub_menu("DEAUTH MODE", deauth_modes, 3);
+        int mode_index = _show_sub_menu("DEAUTH MODE", deauth_modes, 3);
         if (mode_index < 0)
         {
             selected_tag = "";
@@ -414,7 +411,7 @@ void handle_menu_selection()
             {"Jammer Mode", CFG_OPT_FOUR, false}
         };
 
-        int config_mask = run_attack_config_selector("DEAUTH CONFIG", deauth_options, 4);
+        int config_mask = _run_attack_config_selector("DEAUTH CONFIG", deauth_options, 4);
         if (config_mask < 0)
         {
             selected_tag = "";
@@ -550,15 +547,16 @@ void handle_result_screen()
     display.setTextSize(1);
     display.setCursor(2, 1);
     display.print("SCAN RESULT");
-    display.drawLine(0, 9, 127, 9, SSD1306_WHITE);
+    display.drawLine(0, 10, 127, 10, SSD1306_WHITE);
 
     if (menu_size == 0)
     {
         display.setCursor(2, 25);
         display.print("No networks found");
-        display.drawLine(0, 54, 127, 54, SSD1306_WHITE);
-        display.setCursor(2, 56);
-        display.print("BACK: menu");
+        display.drawLine(0, 52, 127, 52, SSD1306_WHITE);
+
+        draw_centered_text("H4KNITER",55,1);
+
         display.display();
         return;
     }
@@ -630,6 +628,6 @@ void handle_result_screen()
     display.display();
 }
 
-void handle_menu(){
+void handle_attacks_menu(){
     _list_attacks_menu();
 }

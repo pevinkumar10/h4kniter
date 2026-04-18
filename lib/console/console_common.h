@@ -29,7 +29,7 @@ void update_btns_status();
 void setup_button_irq(uint8_t pin, void (*callback)());
 
 // menu functions
-void handle_menu();
+void handle_attacks_menu();
 void handle_menu_selection();
 void handle_result_screen();
 void tool_menu_next();

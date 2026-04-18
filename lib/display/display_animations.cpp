@@ -60,6 +60,113 @@ void show_task_progress_frame(const char* text, uint8_t percent, uint8_t phase, 
     display.display();
 }
 
+void show_rect_zoom(const char* text, int cycles, int speed_delay)
+{
+    display.clearDisplay();
+    display.setTextColor(SSD1306_WHITE);
+
+    int center_x = 64;
+    int center_y = 32;
+
+    for (int c = 0; c < cycles; c++)
+    {
+        // 🔁 Zoom IN
+        for (int size = 60; size > 4; size -= 4)
+        {
+            display.clearDisplay();
+
+            // Draw concentric triangles
+            for (int i = 0; i < 6; i++)
+            {
+                int s = size - (i * 5);
+                if (s > 0)
+                {
+                    int x = center_x - s / 2;
+                    int y = center_y - s / 2;
+
+                    // skewed lines → triangle illusion
+                    display.drawLine(x, y + s, x + s/2, y, SSD1306_WHITE);
+                    display.drawLine(x + s, y + s, x + s/2, y, SSD1306_WHITE);
+                }
+            }
+
+            // Optional text
+            if (text != NULL)
+                draw_centered_text(text, 50, 1, false, false);
+
+            display.display();
+            delay(speed_delay);
+        }
+
+        // 🔁 Zoom OUT
+        for (int size = 4; size < 60; size += 4)
+        {
+            display.clearDisplay();
+
+            for (int i = 0; i < 6; i++)
+            {
+                int s = size - (i * 5);
+                if (s > 0)
+                {
+                    int x = center_x - s / 2;
+                    int y = center_y - s / 2;
+
+                    // skewed lines → triangle illusion
+                    display.drawLine(x, y + s, x + s/2, y, SSD1306_WHITE);
+                    display.drawLine(x + s, y + s, x + s/2, y, SSD1306_WHITE);
+                }
+            }
+
+            if (text != NULL)
+                draw_centered_text(text, 50, 1, false, false);
+
+            display.display();
+            delay(speed_delay);
+        }
+    }
+}
+
+void show_text_zoom_with_sub(const char* main_text,const char* sub_text,int max_size,int speed_delay, bool render)
+{
+    int center_y = 20;
+
+    // 🔁 Zoom main text
+    for (int size = 1; size <= max_size; size++)
+    {
+        display.clearDisplay();
+        display.setTextColor(SSD1306_WHITE);
+
+        // Main text (centered, scaling)
+        draw_centered_text(main_text, center_y - (size * 4), size, false, false);
+
+        if (render){
+            display.display();
+        }
+        
+        delay(speed_delay);
+    }
+
+    // ✨ Hold + show subtitle gradually
+    for (int i = 0; i < 3; i++)
+    {
+        display.clearDisplay();
+        display.setTextColor(SSD1306_WHITE);
+
+        // Final main text (fixed size)
+        draw_centered_text(main_text, center_y - (max_size * 4), max_size, false, false);
+
+        // Subtitle (appears with slight delay effect)
+        if (i >= 1)
+            draw_centered_text(sub_text, 45, 1, false, false);
+
+        if (render){
+            display.display();
+        }
+        
+        delay(120);
+    }
+}
+
 void show_loading_bar(const char* text, int size, int delay_sec, bool show_persentage){
 
     display.clearDisplay();
@@ -87,17 +194,5 @@ void show_loading_bar(const char* text, int size, int delay_sec, bool show_perse
 
 void handle_home(){
     display.clearDisplay();
-    display.setTextColor(SSD1306_WHITE);
-    display.setTextSize(2);
-    display.setCursor(10, 10);
-    display.print("H4KNITER");
-    display.setTextSize(1);
-    display.setCursor(100, 30);
-    display.print("v1");
-
-    display.drawLine(0, 50, 127, 50, SSD1306_WHITE);
-    display.setCursor(55, 56);
-    display.print("Menu");
-    display.display();
-
+    draw_h4kniter_home();
 }

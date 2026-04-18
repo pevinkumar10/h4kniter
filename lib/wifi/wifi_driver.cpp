@@ -4,6 +4,8 @@
 void init_wifi(){
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
+    
+    extern int ieee80211_raw_frame_sanity_check(int32_t, int32_t, int32_t);
     delay(100);
 }
 

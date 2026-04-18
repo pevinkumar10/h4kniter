@@ -24,4 +24,7 @@ void handle_home();
 void draw_centered_text(const char* text, int y, int size,bool render = true, bool clear = false);
 void print_text(const char* text, int x, int y,int size, bool render = true, bool clear = false);
 void show_loading_bar(const char* text, int size, int delay_sec,bool show_persentage = false);
+void show_rect_zoom(const char* text, int cycles, int speed_delay);
+void show_text_zoom_with_sub(const char* main_text,const char* sub_text,int max_size,int speed_delay, bool render = true);
 void show_task_progress_frame(const char* text, uint8_t percent, uint8_t phase, bool show_percent = true);
+void draw_h4kniter_home();

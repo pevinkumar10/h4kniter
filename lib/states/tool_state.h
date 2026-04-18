@@ -7,8 +7,7 @@ enum ToolScreen {
     HOME_SCREEN,
     MENU_SCREEN,
     SELECT_SCREEN,
-    RESULT_SCREEN,
-    DEFAULT_SCREEN
+    RESULT_SCREEN
 };
 
 // global flags (declarations)
