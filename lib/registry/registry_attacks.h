@@ -15,4 +15,7 @@ struct SubAttacksList_t {
 };
 
 extern AttacksList_t WiFiAttacksList[];
+extern AttacksList_t BleAttacksList[];
+
 extern const int wifi_attack_count;
+extern const int ble_attack_count;

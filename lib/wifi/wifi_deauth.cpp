@@ -1,12 +1,13 @@
+#include "cstdio"
+#include "cstring"
 #include "esp_wifi.h"
 #include "stdint.h"
-#include "wifi_deauth.h"
+
 #include "tool_state.h"
 #include "display_common.h"
-#include "wifi_common.h"
 #include "console_common.h"
-#include <cstdio>
-#include <cstring>
+#include "wifi_common.h"
+#include "wifi_deauth.h"
 
 static void show_deauth_progress_frame(const char *text, uint32_t sent_count, uint8_t phase)
 {
@@ -224,18 +225,14 @@ void launch_deauth(const char *attack_type, bool random_mac, bool burst_mode, bo
     
     if (jammer_mode)
     {
-        repeats_per_target += 5;
         send_delay = 10;
+        repeats_per_target += 5;
     }
 
     if (safe_mode && repeats_per_target > 1)
     {
+        send_delay = 75;
         repeats_per_target = 1;
-    }
-
-    if (safe_mode)
-    {
-        send_delay = 170;
     }
     
     esp_wifi_set_promiscuous(true);
