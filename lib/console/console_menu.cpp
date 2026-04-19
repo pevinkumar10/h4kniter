@@ -371,25 +371,29 @@ void handle_menu_selection()
                 {"Random Mac", CFG_OPT_ONE, false},
                 {"Safe Scan", CFG_OPT_TWO, false},
             };
-            int scan_config = _run_attack_config_selector("SCAN CONFIG", scan_options, 2);
+            int config_selector_r = _run_attack_config_selector("SCAN CONFIG", scan_options, 2);
 
-            if (scan_config < 0)
+            if (config_selector_r < 0)
             {
                 current_screen = MENU_SCREEN;
                 clear_display();
                 return;
             }
 
-            bool random_mac = (scan_config & CFG_OPT_ONE) != 0;
-            bool safe_mode = (scan_config & CFG_OPT_TWO) != 0;
+            bool random_mac = (config_selector_r & CFG_OPT_ONE) != 0;
+            bool safe_mode = (config_selector_r & CFG_OPT_TWO) != 0;
 
             if (mode_index == 1)
             {
                 safe_mode = true;
             }
 
+            if (random_mac){
+                set_random_mac();
+            }
+
             init_wifi();
-            scan_wifi("Scanning WiFi", random_mac, safe_mode);
+            scan_wifi("Scanning WiFi", safe_mode);
             disable_wifi();
 
             selected_tag = "";
@@ -397,11 +401,9 @@ void handle_menu_selection()
         }
         else if (strcmp(selected_tag, "attack_deauth") == 0)
         {
-            const char *deauth_modes[] = {
-                "Targeted Deauth",
-                "Broadcast Deauth",
-                "Combo Deauth"};
+            const char *deauth_modes[] = {"Targeted Deauth","Broadcast Deauth","Combo Deauth"};
             int mode_index = _show_sub_menu("DEAUTH MODE", deauth_modes, 3);
+
             if (mode_index < 0)
             {
                 selected_tag = "";
@@ -412,12 +414,12 @@ void handle_menu_selection()
 
             ConfigOption deauth_options[] = {
                 {"Random MAC", CFG_OPT_ONE, false},
-                {"Burst Mode", CFG_OPT_TWO, false},
-                {"Safe Mode", CFG_OPT_THREE, false},
-                {"Jammer Mode", CFG_OPT_FOUR, false}};
+                {"Safe Mode", CFG_OPT_TWO, false},
+                {"Jammer Mode", CFG_OPT_THREE, false}};
 
-            int config_mask = _run_attack_config_selector("DEAUTH CONFIG", deauth_options, 4);
-            if (config_mask < 0)
+            int config_selector_r = _run_attack_config_selector("DEAUTH CONFIG", deauth_options, 4);
+
+            if (config_selector_r < 0)
             {
                 selected_tag = "";
                 current_screen = MENU_SCREEN;
@@ -425,22 +427,21 @@ void handle_menu_selection()
                 return;
             }
 
-            bool random_mac = (config_mask & CFG_OPT_ONE) != 0;
-            bool burst_mode = (config_mask & CFG_OPT_TWO) != 0;
-            bool safe_mode = (config_mask & CFG_OPT_THREE) != 0;
-            bool jammer_mode = (config_mask & CFG_OPT_FOUR) != 0;
+            bool random_mac = (config_selector_r & CFG_OPT_ONE) != 0;
+            bool safe_mode = (config_selector_r & CFG_OPT_TWO) != 0;
+            bool jammer_mode = (config_selector_r & CFG_OPT_THREE) != 0;
 
             if (mode_index == 0)
             {
-                launch_deauth("targeted_deauth", random_mac, burst_mode, safe_mode, jammer_mode);
+                launch_deauth_handler("targeted_deauth", random_mac, safe_mode, jammer_mode);
             }
             else if (mode_index == 1)
             {
-                launch_deauth("broadcast_deauth", random_mac, burst_mode, safe_mode, jammer_mode);
+                launch_deauth_handler("broadcast_deauth", random_mac, safe_mode, jammer_mode);
             }
             else
             {
-                launch_deauth("combo_deauth", random_mac, burst_mode, safe_mode, jammer_mode);
+                launch_deauth_handler("combo_deauth", random_mac, safe_mode, jammer_mode);
             }
 
             selected_tag = "";
@@ -449,17 +450,41 @@ void handle_menu_selection()
         }
         else if (strcmp(selected_tag, "attack_eviltwin") == 0)
         {
-            show_task_progress_frame("Evil Twin soon", 100, 0, false);
-            delay(400);
-            selected_tag = "";
-            current_screen = MENU_SCREEN;
-            clear_display();
-        }
-        else if (strcmp(selected_tag, "attack_deauth_eviltwin") == 0)
-        {
-            launch_deauth("targeted_deauth", false, false, false, false);
-            show_task_progress_frame("Evil Twin soon", 100, 0, false);
-            delay(400);
+            
+            const char *eviltwin_modes[] = {"Targeted Evil Twin","Random Evil Twin"};
+            int mode_index = _show_sub_menu("EVIL-TWIN MODE", eviltwin_modes, 2);
+            
+            show_task_progress_frame("Starting evil portal", 100, 0, false);
+
+            if (mode_index < 0)
+            {
+                selected_tag = "";
+                current_screen = MENU_SCREEN;
+                clear_display();
+                return;
+            }
+
+            ConfigOption eviltwin_options[] = {
+                {"Random Mac", CFG_OPT_ONE, false}
+            };
+            
+            int config_selector_r = _run_attack_config_selector("DEAUTH CONFIG", eviltwin_options, 1);
+
+            if (config_selector_r < 0)
+            {
+                selected_tag = "";
+                current_screen = MENU_SCREEN;
+                clear_display();
+                return;
+            }
+
+            bool random_mac = (config_selector_r & CFG_OPT_ONE) != 0;
+
+            if (mode_index == 0)
+            {
+                launch_eviltwin("targeted_eviltwin", random_mac);
+            }
+
             selected_tag = "";
             current_screen = MENU_SCREEN;
             clear_display();

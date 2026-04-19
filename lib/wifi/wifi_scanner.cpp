@@ -96,20 +96,12 @@ void scan_wifi()
 
 void scan_wifi(const char* loading_text)
 {
-    scan_wifi(loading_text, false, false);
+    scan_wifi(loading_text, false);
 }
 
-void scan_wifi(const char* loading_text, bool random_mac, bool safe_mode)
+void scan_wifi(const char* loading_text, bool safe_mode)
 {
     reset_network_cache();
-
-    if (random_mac)
-    {
-        uint8_t mac[6];
-        esp_fill_random(mac, 6);
-        mac[0] = (mac[0] | 0x02) & 0xFE;
-        esp_wifi_set_mac(WIFI_IF_STA, mac);
-    }
 
     WiFi.scanDelete();
     
